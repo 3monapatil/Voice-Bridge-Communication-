@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VoiceBridge — AI Real-Time Sign & Speech Communication</title>
+    <meta name="description" content="VoiceBridge is an AI-powered client-side communication platform converting sign language and AAC inputs into real-time spoken voice for non-verbal individuals.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&family=Outfit:wght@600;700;800;900&display=swap" rel="stylesheet">
+    
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- MediaPipe Hands & Camera Utils CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header class="app-header">
+        <div class="brand-container">
+            <span class="logo-icon">🌐</span>
+            <div>
+                <h1 class="app-title">VoiceBridge</h1>
+            </div>
+            <span class="app-tagline">AI Assistive Communication</span>
+        </div>
+
+        <div class="header-actions">
+            <button id="btn-open-guide" class="btn-nav highlight" title="View supported gestures and judge diagnostics">
+                <span>📚</span> Sign Guide & Diagnostics
+            </button>
+            <button id="btn-open-voice-settings" class="btn-nav" title="Configure voice profile, pitch, and rate">
+                <span>⚙️</span> Voice Settings
+            </button>
+            <button id="btn-open-add-phrase" class="btn-nav" title="Add a custom quick-access phrase">
+                <span>➕</span> Add Phrase
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Dashboard Grid -->
+    <main class="dashboard-grid">
+        
+        <!-- Left Panel: Vision & Gesture Camera Viewport -->
+        <section class="panel camera-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>📷</span> Camera & Sign Detection
+                </div>
+                <div id="detection-status" class="badge-status">
+                    <span class="status-dot searching"></span> Searching for Hand...
+                </div>
+            </div>
+
+            <div class="panel-body">
+                <!-- Camera Viewport Container -->
+                <div class="camera-container">
+                    <video id="webcam-video" autoplay playsinline muted></video>
+                    <canvas id="landmark-canvas"></canvas>
+
+                    <!-- Top HUD Indicators -->
+                    <div class="camera-hud-top">
+                        <div class="badge-status">
+                            <span>🤖</span> MediaPipe AI
+                        </div>
+                        <div id="fps-counter" class="badge-fps">-- FPS</div>
+                    </div>
+
+                    <!-- Bottom Floating Gesture HUD Badge -->
+                    <div id="gesture-hud-badge" class="gesture-hud-badge hidden">
+                        <div class="gesture-hud-content">
+                            <div class="gesture-hud-left">
+                                <span id="gesture-hud-emoji" class="gesture-hud-emoji">✋</span>
+                                <div>
+                                    <div id="gesture-hud-text" class="gesture-hud-text">Detecting...</div>
+                                    <div class="gesture-hud-tip">Hold steadily to confirm</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="progress-track">
+                            <div id="gesture-hud-progress" class="progress-bar-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Camera Control Buttons -->
+                <div class="camera-controls">
+                    <button id="btn-toggle-camera" class="btn-ctrl btn-primary">
+                        🎥 Start Camera
+                    </button>
+                    <button id="btn-mirror-camera" class="btn-ctrl btn-secondary active" title="Toggle Mirror View">
+                        🪞 Mirror Mode
+                    </button>
+                    <button id="btn-sim-mode" class="btn-ctrl btn-secondary" title="Simulate signs without webcam">
+                        🧪 Demo Simulation
+                    </button>
+                </div>
+
+                <!-- Simulation Quick Bar for Judges/Testers -->
+                <div id="sim-toolbar" class="sim-toolbar hidden">
+                    <div class="sim-title">
+                        <span>🧪 Judge / Demo Gesture Simulator</span>
+                        <small>Click to trigger sign without camera</small>
+                    </div>
+                    <div class="sim-btn-group">
+                        <button class="sim-btn" data-gesture="HELLO">👋 Hello</button>
+                        <button class="sim-btn" data-gesture="HELP">👍 Help</button>
+                        <button class="sim-btn" data-gesture="WATER">💧 Water</button>
+                        <button class="sim-btn" data-gesture="FOOD">🍲 Food</button>
+                        <button class="sim-btn" data-gesture="PAIN">☝️ Pain</button>
+                        <button class="sim-btn" data-gesture="YES">✊ Yes</button>
+                        <button class="sim-btn" data-gesture="NO">👎 No</button>
+                        <button class="sim-btn" data-gesture="THANK_YOU">🙏 Thank You</button>
+                        <button class="sim-btn" data-gesture="ILY">🤟 I Love You</button>
+                        <button class="sim-btn" data-gesture="BATHROOM">🚻 Bathroom</button>
+                        <button class="sim-btn" data-gesture="CALL_ME">🤙 Call Doctor</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Right Panel: Sentence Buffer, Speech Engine & AAC Grid -->
+        <section class="panel sentence-panel">
+            <div class="panel-header">
+                <div class="panel-title">
+                    <span>🔊</span> Speech Synthesis & Sentence Hub
+                </div>
+                <label class="auto-speak-container" title="Automatically speak signs as soon as confirmed">
+                    <input type="checkbox" id="checkbox-auto-speak">
+                    <span>Auto-Speak Signs</span>
+                </label>
+            </div>
+
+            <div class="panel-body">
+                <!-- Sentence Input & Live Buffer -->
+                <div class="sentence-box-container">
+                    <div class="sentence-top-bar">
+                        <span class="sentence-label">Live Sentence Buffer</span>
+                        <div class="sentence-stats">
+                            <span id="word-count">0 words</span>
+                            <span>•</span>
+                            <span id="char-count">0 chars</span>
+                        </div>
+                    </div>
+
+                    <textarea id="sentence-buffer" placeholder="Sign with your hand, tap quick phrases below, or type directly here to speak..." rows="3"></textarea>
+
+                    <div class="sentence-actions">
+                        <button id="btn-speak" class="btn-speak-main" title="Speak full sentence aloud">
+                            🔊 Speak Sentence
+                        </button>
+                        <button id="btn-stop-speak" class="btn-stop-speech" title="Stop speech">
+                            ⏹️ Stop
+                        </button>
+                        <button id="btn-ai-smooth" class="btn-ai-expand" title="Convert keywords into natural sentence">
+                            ✨ AI Expand Sentence
+                        </button>
+                        <button id="btn-backspace" class="btn-action-small" title="Delete last word">
+                            ⌫ Backspace
+                        </button>
+                        <button id="btn-clear-buffer" class="btn-action-small" title="Clear all text">
+                            🗑️ Clear
+                        </button>
+                        <button id="btn-copy-buffer" class="btn-action-small" title="Copy text to clipboard">
+                            📋 Copy
+                        </button>
+                    </div>
+                </div>
+
+                <!-- AAC Quick Phrase Board -->
+                <div class="aac-section">
+                    <div id="aac-container">
+                        <!-- Rendered by aac-board.js -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Visual Confirmation Toast -->
+    <div id="confirmation-toast" class="confirmation-toast">
+        <span class="toast-emoji">✅</span> Recognized sign
+    </div>
+
+    <!-- Modal 1: Sign Language Reference Guide & Judge Diagnostic Panel -->
+    <div id="modal-guide" class="modal-backdrop hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h3>📖 Gesture Reference Guide & Telemetry</h3>
+                <button id="btn-close-guide" class="modal-close-btn">&times;</button>
+            </div>
+            <div id="guide-modal-body" class="modal-body">
+                <!-- Injected via reference-guide.js -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Voice Settings & Speech Profiles -->
+    <div id="modal-voice-settings" class="modal-backdrop hidden">
+        <div class="modal-window" style="max-width: 520px;">
+            <div class="modal-header">
+                <h3>⚙️ Voice Profiles & Speech Settings</h3>
+                <button id="btn-close-voice-settings" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Preset Buttons -->
+                <div class="settings-group">
+                    <label class="settings-label-row">
+                        <span>Voice Profiles</span>
+                    </label>
+                    <div class="presets-group">
+                        <button class="preset-btn" data-preset="natural">🌟 Natural</button>
+                        <button class="preset-btn" data-preset="calm">🧘 Calm & Soft</button>
+                        <button class="preset-btn" data-preset="clear_slow">📢 Clear / Slow</button>
+                        <button class="preset-btn" data-preset="urgent">🚨 Urgent / Alert</button>
+                    </div>
+                </div>
+
+                <!-- Voice Selection Dropdown -->
+                <div class="settings-group">
+                    <label class="settings-label-row">
+                        <span>Synthesizer Voice</span>
+                    </label>
+                    <select id="voice-select" class="settings-select"></select>
+                </div>
+
+                <!-- Speech Rate -->
+                <div class="settings-group">
+                    <div class="settings-label-row">
+                        <span>Speed (Rate)</span>
+                        <span id="rate-val" class="settings-val-badge">1.0x</span>
+                    </div>
+                    <input type="range" id="rate-slider" class="settings-slider" min="0.5" max="1.8" step="0.05" value="1.0">
+                </div>
+
+                <!-- Pitch -->
+                <div class="settings-group">
+                    <div class="settings-label-row">
+                        <span>Tone (Pitch)</span>
+                        <span id="pitch-val" class="settings-val-badge">1.0x</span>
+                    </div>
+                    <input type="range" id="pitch-slider" class="settings-slider" min="0.5" max="1.8" step="0.05" value="1.0">
+                </div>
+
+                <!-- Volume -->
+                <div class="settings-group">
+                    <div class="settings-label-row">
+                        <span>Volume</span>
+                        <span id="volume-val" class="settings-val-badge">100%</span>
+                    </div>
+                    <input type="range" id="volume-slider" class="settings-slider" min="0" max="1" step="0.05" value="1">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 3: Add Custom Phrase -->
+    <div id="modal-add-phrase" class="modal-backdrop hidden">
+        <div class="modal-window" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3>⭐ Add Custom Quick Phrase</h3>
+                <button id="btn-close-add-phrase" class="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-field">
+                    <label for="input-new-phrase">Phrase Text</label>
+                    <input type="text" id="input-new-phrase" class="form-input" placeholder="e.g., My name is Alex and I need my medicine." />
+                </div>
+                <div class="form-field">
+                    <label for="select-new-phrase-icon">Icon</label>
+                    <select id="select-new-phrase-icon" class="settings-select">
+                        <option value="💬">💬 Message</option>
+                        <option value="💊">💊 Medication</option>
+                        <option value="👨‍👩‍👧">👨‍👩‍👧 Family</option>
+                        <option value="🏥">🏥 Medical</option>
+                        <option value="🚗">🚗 Travel</option>
+                        <option value="🔑">🔑 Personal</option>
+                        <option value="❤️">❤️ Love</option>
+                    </select>
+                </div>
+                <button id="btn-save-custom-phrase" class="btn-ctrl btn-primary" style="margin-top: 10px;">
+                    💾 Save Phrase
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Script Modules in Dependency Order -->
+    <script src="js/audio-feedback.js"></script>
+    <script src="js/tts.js"></script>
+    <script src="js/gesture-recognizer.js"></script>
+    <script src="js/camera.js"></script>
+    <script src="js/aac-board.js"></script>
+    <script src="js/ai-smoother.js"></script>
+    <script src="js/reference-guide.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

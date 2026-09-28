@@ -1,0 +1,21 @@
+{
+  "name": "voicebridge",
+  "version": "1.0.0",
+  "description": "AI-Powered Real-Time Sign Language & Speech Communication Platform for Non-Verbal Individuals",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve .",
+    "dev": "serve ."
+  },
+  "keywords": [
+    "assistive-tech",
+    "sign-language",
+    "mediapipe",
+    "aac",
+    "text-to-speech",
+    "web-speech-api",
+    "accessibility"
+  ],
+  "author": "VoiceBridge Team",
+  "license": "MIT"
+}
